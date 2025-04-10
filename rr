@@ -1,0 +1,409 @@
+DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Permission System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        danger: '#ef4444',
+                        warning: '#f59e0b'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .blink {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Staff Permission System</h1>
+                <div class="flex items-center mt-2">
+                    <div id="live-clock" class="text-xl font-semibold text-primary mr-4"></div>
+                    <div id="current-date" class="text-lg text-gray-600"></div>
+                </div>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <button id="refresh-btn" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-sync-alt mr-2"></i> Refresh Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Staff List -->
+            <div class="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Staff List</h2>
+                <div class="mb-4">
+                    <label for="position-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Position:</label>
+                    <select id="position-filter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="all">All Positions</option>
+                        <option value="Cs">CS</option>
+                        <option value="Kapten">Kapten</option>
+                        <option value="Kasir">Kasir</option>
+                    </select>
+                </div>
+                <div class="overflow-y-auto max-h-96">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-list" class="bg-white divide-y divide-gray-200">
+                            <!-- Staff data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Permission Form -->
+            <div class="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Request Permission</h2>
+                <form id="permission-form">
+                    <div class="mb-4">
+                        <label for="staff-select" class="block text-sm font-medium text-gray-700 mb-1">Select Staff:</label>
+                        <select id="staff-select" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                            <option value="" disabled selected>Select staff member</option>
+                            <!-- Staff options will be loaded here -->
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Permission Type:</label>
+                        <div class="flex items-center mb-2">
+                            <input type="radio" id="permission-out" name="permission-type" value="out" class="mr-2" checked>
+                            <label for="permission-out" class="text-sm text-gray-700">Going Out (15 minutes)</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="permission-in" name="permission-type" value="in" class="mr-2">
+                            <label for="permission-in" class="text-sm text-gray-700">Returning</label>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="permission-reason" class="block text-sm font-medium text-gray-700 mb-1">Reason (optional):</label>
+                        <textarea id="permission-reason" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-primary hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-paper-plane mr-2"></i> Submit Request
+                    </button>
+                </form>
+            </div>
+
+            <!-- Current Status & History -->
+            <div class="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Current Status</h2>
+                <div class="grid grid-cols-1 gap-4 mb-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-blue-800">CS Out</span>
+                            <span id="cs-out-count" class="text-xl font-bold text-blue-800">0</span>
+                        </div>
+                        <div id="cs-out-names" class="text-sm text-blue-600 mt-1"></div>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-green-800">Kapten Out</span>
+                            <span id="kapten-out-count" class="text-xl font-bold text-green-800">0</span>
+                        </div>
+                        <div id="kapten-out-names" class="text-sm text-green-600 mt-1"></div>
+                    </div>
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-purple-800">Kasir Out</span>
+                            <span id="kasir-out-count" class="text-xl font-bold text-purple-800">0</span>
+                        </div>
+                        <div id="kasir-out-names" class="text-sm text-purple-600 mt-1"></div>
+                    </div>
+                </div>
+
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Recent History</h2>
+                <div class="overflow-y-auto max-h-64">
+                    <ul id="history-list" class="space-y-2">
+                        <!-- History items will be loaded here -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="fixed bottom-4 right-4 hidden">
+            <div class="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center fade-in">
+                <i class="fas fa-check-circle mr-2"></i>
+                <span id="toast-message">Operation successful!</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data - in a real app, this would come from Google Sheets
+        let staffData = [
+            { id: 1, name: "Jesaya", position: "Cs", status: "in", lastAction: null },
+            { id: 2, name: "Andi", position: "Kapten", status: "in", lastAction: null },
+            { id: 3, name: "Budi", position: "Kasir", status: "in", lastAction: null },
+            { id: 4, name: "Citra", position: "Kasir", status: "in", lastAction: null },
+            { id: 5, name: "Dewi", position: "Kasir", status: "in", lastAction: null },
+            { id: 6, name: "Eka", position: "Cs", status: "in", lastAction: null },
+            { id: 7, name: "Fajar", position: "Kapten", status: "in", lastAction: null }
+        ];
+
+        let historyLog = [];
+
+        // DOM Elements
+        const staffList = document.getElementById('staff-list');
+        const staffSelect = document.getElementById('staff-select');
+        const positionFilter = document.getElementById('position-filter');
+        const permissionForm = document.getElementById('permission-form');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        const liveClock = document.getElementById('live-clock');
+        const currentDate = document.getElementById('current-date');
+        const csOutCount = document.getElementById('cs-out-count');
+        const kaptenOutCount = document.getElementById('kapten-out-count');
+        const kasirOutCount = document.getElementById('kasir-out-count');
+        const csOutNames = document.getElementById('cs-out-names');
+        const kaptenOutNames = document.getElementById('kapten-out-names');
+        const kasirOutNames = document.getElementById('kasir-out-names');
+        const historyList = document.getElementById('history-list');
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            loadStaffData();
+            updateStatusCounters();
+            loadHistory();
+        });
+
+        // Update live clock
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const dateString = now.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            liveClock.textContent = timeString;
+            currentDate.textContent = dateString;
+        }
+
+        // Load staff data into the table and dropdown
+        function loadStaffData() {
+            // Clear existing data
+            staffList.innerHTML = '';
+            staffSelect.innerHTML = '<option value="" disabled selected>Select staff member</option>';
+            
+            const filterValue = positionFilter.value;
+            
+            staffData.forEach(staff => {
+                // Filter staff based on position
+                if (filterValue === 'all' || staff.position === filterValue) {
+                    // Add to staff list table
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = 
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${staff.name}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${staff.position}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                ${staff.status === 'in' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                ${staff.status === 'in' ? 'Available' : 'On Break'}
+                            </span>
+                        </td>
+                    ;
+                    staffList.appendChild(row);
+                }
+                
+                // Add to dropdown (only available staff)
+                if (staff.status === 'in') {
+                    const option = document.createElement('option');
+                    option.value = staff.id;
+                    option.textContent = ${staff.name} (${staff.position});
+                    staffSelect.appendChild(option);
+                } else if (document.querySelector(input[name="permission-type"]:checked).value === 'in') {
+                    // Show in dropdown if they're out and we're selecting "returning"
+                    const option = document.createElement('option');
+                    option.value = staff.id;
+                    option.textContent = ${staff.name} (${staff.position}) - On Break;
+                    staffSelect.appendChild(option);
+                }
+            });
+        }
+
+        // Update the counters for each position
+        function updateStatusCounters() {
+            const csOut = staffData.filter(s => s.position === 'Cs' && s.status === 'out');
+            const kaptenOut = staffData.filter(s => s.position === 'Kapten' && s.status === 'out');
+            const kasirOut = staffData.filter(s => s.position === 'Kasir' && s.status === 'out');
+            
+            csOutCount.textContent = csOut.length;
+            kaptenOutCount.textContent = kaptenOut.length;
+            kasirOutCount.textContent = kasirOut.length;
+            
+            csOutNames.textContent = csOut.map(s => s.name).join(', ') || 'None';
+            kaptenOutNames.textContent = kaptenOut.map(s => s.name).join(', ') || 'None';
+            kasirOutNames.textContent = kasirOut.map(s => s.name).join(', ') || 'None';
+            
+            // Add warning classes if limits are exceeded
+            csOutCount.className = text-xl font-bold ${csOut.length > 1 ? 'text-danger blink' : 'text-blue-800'};
+            kaptenOutCount.className = text-xl font-bold ${kaptenOut.length > 1 ? 'text-danger blink' : 'text-green-800'};
+            kasirOutCount.className = text-xl font-bold ${kasirOut.length > 3 ? 'text-danger blink' : 'text-purple-800'};
+        }
+
+        // Load history log
+        function loadHistory() {
+            historyList.innerHTML = '';
+            
+            // Sort by most recent first
+            const sortedHistory = [...historyLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            sortedHistory.slice(0, 10).forEach(entry => {
+                const li = document.createElement('li');
+                li.className = 'bg-gray-50 p-3 rounded-lg';
+                
+                const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                li.innerHTML = 
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-medium">${entry.staffName}</span>
+                            <span class="text-sm text-gray-500 ml-2">(${entry.position})</span>
+                        </div>
+                        <span class="text-xs text-gray-400">${time}</span>
+                    </div>
+                    <div class="mt-1 text-sm">
+                        <span class="${entry.action === 'out' ? 'text-yellow-600' : 'text-green-600'}">
+                            ${entry.action === 'out' ? 'Went out' : 'Returned'}
+                        </span>
+                        ${entry.reason ? <span class="text-gray-600 ml-2">- ${entry.reason}</span> : ''}
+                    </div>
+                ;
+                
+                historyList.appendChild(li);
+            });
+        }
+
+        // Show notification toast
+        function showToast(message, isError = false) {
+            toastMessage.textContent = message;
+            toast.className = fixed bottom-4 right-4 flex items-center fade-in ${isError ? 'bg-red-500' : 'bg-green-500'} text-white px-6 py-3 rounded-lg shadow-lg;
+            
+            setTimeout(() => {
+                toast.className = 'fixed bottom-4 right-4 hidden';
+            }, 3000);
+        }
+
+        // Handle permission form submission
+        permissionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const staffId = parseInt(staffSelect.value);
+            const permissionType = document.querySelector('input[name="permission-type"]:checked').value;
+            const reason = document.getElementById('permission-reason').value;
+            
+            const staff = staffData.find(s => s.id === staffId);
+            if (!staff) return;
+            
+            // Check position limits
+            if (permissionType === 'out') {
+                if (staff.position === 'Cs' && staffData.filter(s => s.position === 'Cs' && s.status === 'out').length >= 1) {
+                    showToast('Only 1 CS can be out at a time', true);
+                    return;
+                }
+                if (staff.position === 'Kapten' && staffData.filter(s => s.position === 'Kapten' && s.status === 'out').length >= 1) {
+                    showToast('Only 1 Kapten can be out at a time', true);
+                    return;
+                }
+                if (staff.position === 'Kasir' && staffData.filter(s => s.position === 'Kasir' && s.status === 'out').length >= 3) {
+                    showToast('Maximum 3 Kasir can be out at a time', true);
+                    return;
+                }
+            }
+            
+            // Update staff status
+            staff.status = permissionType === 'out' ? 'out' : 'in';
+            staff.lastAction = new Date();
+            
+            // Add to history log
+            historyLog.push({
+                staffName: staff.name,
+                position: staff.position,
+                action: permissionType,
+                reason: reason || null,
+                timestamp: new Date()
+            });
+            
+            // Reset form
+            permissionForm.reset();
+            document.getElementById('permission-out').checked = true;
+            
+            // Update UI
+            loadStaffData();
+            updateStatusCounters();
+            loadHistory();
+            
+            showToast(Permission ${permissionType === 'out' ? 'granted' : 'completed'} for ${staff.name});
+            
+            // If staff went out, set timeout for 15 minutes
+            if (permissionType === 'out') {
+                setTimeout(() => {
+                    // Check if staff hasn't returned yet
+                    const currentStaff = staffData.find(s => s.id === staffId);
+                    if (currentStaff && currentStaff.status === 'out') {
+                        showToast(${staff.name}'s 15-minute break time is over, true);
+                    }
+                }, 15 * 60 * 1000); // 15 minutes
+            }
+        });
+
+        // Handle filter change
+        positionFilter.addEventListener('change', loadStaffData);
+
+        // Handle permission type radio change
+        document.querySelectorAll('input[name="permission-type"]').forEach(radio => {
+            radio.addEventListener('change', loadStaffData);
+        });
+
+        // Handle refresh button
+        refreshBtn.addEventListener('click', function() {
+            // In a real app, this would reload data from Google Sheets
+            loadStaffData();
+            updateStatusCounters();
+            loadHistory();
+            showToast('Data refreshed');
+        });
+    </script>
+</body>
+</html>
